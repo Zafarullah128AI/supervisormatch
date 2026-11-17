@@ -1,11 +1,17 @@
-"""SupervisorMatch AI assistant (v6): Gemini-powered, grounded in local ML.
+"""SupervisorMatch AI assistant (v6/v7): Gemini-powered, grounded in local ML.
 
 How it works:
 - The local matching engine still computes every fact: idea quality,
   uniqueness against past FYP titles, top supervisors, gibberish check.
-- Those facts are passed into the Gemini prompt (model gemini-flash-lite-latest,
-  override with GEMINI_MODEL), so the model discusses REAL computed data
-  instead of inventing names, scores or statistics.
+- For ideas, process questions and named supervisors, those facts are
+  passed into the Gemini prompt (model gemini-flash-lite-latest, override
+  with GEMINI_MODEL), so the model discusses REAL computed data instead
+  of inventing names, scores or statistics.
+- For general questions (concepts, explanations, idea suggestions, study
+  help) the model answers from its own knowledge, like a real assistant:
+  the old design treated every long message as an idea and told the model
+  to use only the supplied facts, so a question such as "what is machine
+  learning?" came back as an idea-quality report instead of an answer.
 - The API key is NEVER in code: it comes from the GEMINI_API_KEY
   environment variable, or from a `.env` file in the project root
   (git-ignored). No key, or any API error, -> the rule-based replies
@@ -45,12 +51,18 @@ GEMINI_URL = (
 
 SYSTEM_INSTRUCTION = (
     "You are the SupervisorMatch assistant, helping students of SBBU "
-    "(Shaheed Benazir Bhutto University, Shaheed Benazirabad) find a "
-    "supervisor for their Final Year Project.\n"
+    "(Shaheed Benazir Bhutto University, Shaheed Benazirabad) with their "
+    "Final Year Project and with general study questions.\n"
+    "TWO MODES:\n"
+    "1. When the context contains system facts (a supervisor profile, idea "
+    "quality, matching scores, the approval process, evaluation numbers): "
+    "use ONLY those facts for supervisor names, scores, ratings and "
+    "statistics. Never invent them. If a fact is not in the context, say "
+    "you do not know it.\n"
+    "2. When the context says GENERAL QUESTION: answer from your own "
+    "knowledge, clearly and simply, like a helpful teacher. You may explain "
+    "concepts and suggest FYP ideas.\n"
     "RULES:\n"
-    "- Only use the facts in the context below. Never invent supervisor "
-    "names, ratings, scores or statistics. If a fact is not in the "
-    "context, say you do not know it.\n"
     "- Keep replies short (under 120 words) and friendly.\n"
     "- The student may write in English or Roman Urdu. Reply in the same "
     "language they used.\n"
@@ -200,7 +212,7 @@ def rule_reply(user, message):
         return {"reply": "\n".join(lines), "quality": quality,
                 "uniqueness": uniqueness, "matches": matches}
 
-    return {"reply": "I can help with your FYP idea: paste your project title and description and I will check its quality, originality and best supervisors. Or ask me how matching works, how the approval process goes, or about a supervisor by name.",
+    return {"reply": "I can help with your FYP idea: paste your project title and description and I will check its quality, originality and best supervisors. You can also ask me a general question, how matching works, how the approval process goes, or about a supervisor by name.",
             "quality": None, "uniqueness": None, "matches": []}
 
 
@@ -228,6 +240,49 @@ PROCESS_KEYWORDS = (
     "rate", "full", "capacity", "load", "available", "busy", "deadline",
     "last date",
 )
+
+GREETING_WORDS = ("salam", "hello", "hi", "hey", "aoa")
+
+# A question starts with a wh-word (English or Roman Urdu), ends with "?",
+# or contains a request phrase. Wh-words only count at the start, so an
+# idea such as "a system that teaches how to code" is not misread as one.
+QUESTION_STARTS = (
+    "what", "why", "how", "which", "when", "where", "who", "whom", "whose",
+    "kya", "kaise", "konsa", "konse", "konsi", "kab", "kahan", "kyun", "kyon",
+)
+QUESTION_PHRASES = (
+    "tell me", "can you", "could you", "would you", "please explain",
+    "explain", "suggest", "recommend", "batao", "bataen", "samjhao",
+    "samjhaen", "mean by", "means", "meaning of", "define",
+    "difference between",
+)
+
+GENERAL_QUESTION_CONTEXT = (
+    "GENERAL QUESTION: the student asked a general question (a concept, an "
+    "explanation, a suggestion, study help). Answer it from your own "
+    "knowledge, clearly and simply. Do not invent supervisor names, scores "
+    "or SBBU facts."
+)
+
+GREETING_CONTEXT = (
+    "The student just greeted you. Reply warmly and briefly, and offer to "
+    "help with their FYP idea, a supervisor question, or any study question."
+)
+
+SHORT_MESSAGE_CONTEXT = (
+    "SHORT MESSAGE: the student wrote only a few words. Ask them to describe "
+    "their idea or question in a full sentence, and say what you can help with."
+)
+
+
+def _is_question(low):
+    """True when the message is a question, not an idea statement."""
+    if low.rstrip().endswith("?"):
+        return True
+    first = low.split()[0] if low.split() else ""
+    if first in QUESTION_STARTS:
+        return True
+    return _has_any(low, QUESTION_PHRASES)
 
 
 def _idea_context(msg):
@@ -298,9 +353,17 @@ def chat_reply(user, message):
     elif _has_any(low, PROCESS_KEYWORDS):
         # A process question is not an idea: no quality score in the context.
         context = PROCESS_FACTS
+    elif _has_any(low, GREETING_WORDS) and len(low.split()) <= 4:
+        context = GREETING_CONTEXT
+    elif _is_question(low):
+        # A general question is not an idea: answer it from the model's own
+        # knowledge instead of scoring it as a project idea.
+        context = GENERAL_QUESTION_CONTEXT
     elif len(low.split()) >= 4:
         context, quality, uniqueness, matches = _idea_context(msg)
         context = PROCESS_FACTS + "\n" + context
+    else:
+        context = SHORT_MESSAGE_CONTEXT
 
     text = gemini_reply(msg, context)
     if text is not None:
