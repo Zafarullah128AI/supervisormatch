@@ -1,0 +1,13 @@
+# secrets and local config
+.env
+.env.*
+!.env.example
+# python
+__pycache__/
+*.py[cod]
+*.db
+*.sqlite3
+.venv/
+venv/
+# runtime data
+guest_data.json
