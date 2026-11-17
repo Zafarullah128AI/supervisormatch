@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="SupervisorMatch — Intelligent FYP Supervisor Recommendation System. Students submit a project idea, get ranked supervisor matches, and complete the full approval cycle in one place.">
+<title>SupervisorMatch — Find Your FYP Supervisor</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/styles.css">
+<script src="/static/chart.min.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="uni-brand" onclick="goHome()" title="Shaheed Benazir Bhutto University, Shaheed Benazirabad">
+      <img src="/static/assets/sbbu-seal.png" alt="SBBU logo" class="uni-seal">
+      <span class="uni-names">
+        <span class="uni-name">Shaheed Benazir Bhutto University</span>
+        <span class="uni-sub">Shaheed Benazirabad · SupervisorMatch</span>
+      </span>
+    </div>
+    <nav id="nav" class="nav"></nav>
+    <div class="topbar-right">
+      <button id="themeBtn" class="theme-toggle" onclick="toggleTheme()" title="Switch dark / light mode">🌙</button>
+      <button id="bellBtn" class="bell hidden" onclick="showView('notifications')" title="Notifications">
+        🔔 <span id="bellCount" class="bell-count hidden">0</span>
+      </button>
+      <span id="userChip" class="user-chip hidden"></span>
+      <button id="logoutBtn" class="btn btn-light btn-sm hidden" onclick="logout()">Logout</button>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- ============ AUTH ============ -->
+  <section id="view-auth" class="view">
+    <div class="hero">
+      <p class="hero-motto">Knowledge &middot; Commitment &middot; Leadership</p>
+      <h1>SupervisorMatch</h1>
+      <p class="hero-sub">Intelligent FYP Supervisor Recommendation System</p>
+      <p>Submit your project idea, get ranked supervisor matches based on research interests, and complete the full approval cycle — request, teacher acceptance, and admin approval — in one place.</p>
+      <div class="hero-steps">
+        <div class="step"><span>1</span> Submit idea</div>
+        <div class="step"><span>2</span> Get ranked matches</div>
+        <div class="step"><span>3</span> Send request</div>
+        <div class="step"><span>4</span> Get approved</div>
+      </div>
+      <div class="landing-stats">
+        <div><strong id="statSupervisors">100</strong><span>supervisors</span></div>
+        <div><strong id="statDepartments">2</strong><span>departments</span></div>
+        <div><strong>0.8</strong><span>Hit@5 matching score</span></div>
+        <div><strong>4 steps</strong><span>approval cycle</span></div>
+      </div>
+    </div>
+    <div class="grid-2 auth-overlap">
+      <div class="card auth-card">
+        <h2>Login</h2>
+        <p class="server-status"><span id="serverDot" class="status-dot"></span> <span id="serverText">Checking server&hellip;</span></p>
+        <label>Email <input id="loginEmail" type="email" placeholder="you@sbbusba.edu.pk"></label>
+        <label>Password <input id="loginPass" type="password" placeholder="Password"></label>
+        <button class="btn btn-primary btn-block" onclick="doLogin()">Login</button>
+        <div class="demo-divider"><span>or try the demo — one click, no registration</span></div>
+        <div class="demo-grid">
+          <button class="demo-btn" onclick="demoLogin('student')"><span class="demo-ico">🎓</span><b>Try as Student</b><small>demo student</small></button>
+          <button class="demo-btn" onclick="demoLogin('teacher')"><span class="demo-ico">👨‍🏫</span><b>Try as Teacher</b><small>Ghulam Mustafa</small></button>
+          <button class="demo-btn" onclick="demoLogin('admin')"><span class="demo-ico">👨‍💼</span><b>Try as Admin</b><small>admin</small></button>
+        </div>
+        <p class="muted small">Demo accounts — Admin: admin@sbbusba.edu.pk / admin123<br>
+        Teacher: ghulammustafa@sbbusba.edu.pk / teacher123<br>
+        Student: demo@student.sbbusba.edu.pk / demo123</p>
+      </div>
+      <div class="card auth-card">
+        <h2>Create Account</h2>
+        <label>Full name <input id="regName" placeholder="Your full name"></label>
+        <label>Email <input id="regEmail" type="email" placeholder="you@sbbusba.edu.pk"></label>
+        <label>Password <input id="regPass" type="password" placeholder="Password"></label>
+        <label>Role
+          <select id="regRole">
+            <option value="student">Student</option>
+            <option value="supervisor">Supervisor</option>
+          </select>
+        </label>
+        <label>Department <input id="regDept" placeholder="Information Technology"></label>
+        <label>Roll no (students) <input id="regRoll" placeholder="24BS(IT)128"></label>
+        <button class="btn btn-primary" onclick="doRegister()">Register</button>
+      </div>
+    </div>
+    <div class="feature-grid">
+      <article class="feature-card">
+        <div class="feature-icon">🎯</div>
+        <h3>Smart matching</h3>
+        <p>TF-IDF + domain boost ranks supervisors by how well their research interests fit your idea — with a plain-English explanation for every match.</p>
+      </article>
+      <article class="feature-card">
+        <div class="feature-icon">✅</div>
+        <h3>Full approval cycle</h3>
+        <p>Student request → teacher accepts → admin approves. Every step notifies everyone involved, and nothing gets lost in WhatsApp chats.</p>
+      </article>
+      <article class="feature-card">
+        <div class="feature-icon">🏆</div>
+        <h3>Supervisor rankings</h3>
+        <p>A live leaderboard ranked by student ratings, approved assignments and total matches — so the best supervisors rise to the top.</p>
+      </article>
+      <article class="feature-card">
+        <div class="feature-icon">💬</div>
+        <h3>AI assistant + idea check</h3>
+        <p>Chat with the built-in assistant about your title and description. Powered by Gemini AI when a key is set (otherwise it answers with built-in rules). It checks idea quality, warns about random-letter input, and tells you if a similar project was done before.</p>
+      </article>
+      <article class="feature-card">
+        <div class="feature-icon">📊</div>
+        <h3>Measured, not guessed</h3>
+        <p>Evaluated on 10 labeled test ideas: full pipeline Hit@5 0.8, MRR 0.57, NDCG@5 0.628 — better than TF-IDF alone on every metric. With BERT semantic matching, Hit@5 rises to 0.9.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- ============ DASHBOARD ============ -->
+  <section id="view-dashboard" class="view hidden">
+    <h1 id="dashTitle">Dashboard</h1>
+    <div id="dashStats" class="stat-row"></div>
+    <div id="dashBody"></div>
+  </section>
+
+  <!-- ============ SUBMIT IDEA ============ -->
+  <section id="view-submit" class="view hidden">
+    <h1>Submit Project Idea</h1>
+    <div class="card">
+      <label>Project title <input id="ideaTitle" placeholder="e.g. Cybersecurity based secure voting system"></label>
+      <label>Project description
+        <textarea id="ideaDesc" rows="4" placeholder="Describe your FYP idea in 2–3 lines..."></textarea>
+      </label>
+      <button class="btn btn-primary" onclick="submitIdea()">Generate Matches</button>
+      <button class="btn btn-outline" onclick="checkQuality()">Check Idea Quality</button>
+      <p class="muted small">Check first: quality score, originality against past FYP titles, and a warning if the text looks like random letters.</p>
+    </div>
+    <div id="qualityBox"></div>
+    <div id="matchResults"></div>
+  </section>
+
+  <!-- ============ MY REQUESTS (student) ============ -->
+  <section id="view-my-requests" class="view hidden">
+    <h1>My Requests</h1>
+    <p class="muted">Track the full cycle: Pending → Teacher Accepted → Admin Approved (Assigned).</p>
+    <div id="myRequestsBody"></div>
+    <div id="feedbackBox" class="card hidden">
+      <h2>Rate Your Supervisor</h2>
+      <label>Request
+        <select id="fbRequest"></select>
+      </label>
+      <label>Rating (1–5) <input id="fbRating" type="number" min="1" max="5" value="5"></label>
+      <label>Comment <input id="fbComment" placeholder="Optional comment"></label>
+      <button class="btn btn-primary" onclick="submitFeedback()">Submit Feedback</button>
+    </div>
+  </section>
+
+  <!-- ============ INCOMING (supervisor) ============ -->
+  <section id="view-incoming" class="view hidden">
+    <h1>Incoming Requests</h1>
+    <p class="muted">Accept a request to send it to the admin for final approval, or reject it.</p>
+    <div id="incomingBody"></div>
+    <h2>Assigned Students</h2>
+    <div id="assignedBody"></div>
+  </section>
+
+  <!-- ============ PROFILE (supervisor) ============ -->
+  <section id="view-profile" class="view hidden">
+    <h1>Edit My Profile</h1>
+    <div class="card">
+      <label>Designation <input id="profDes"></label>
+      <label>Research interests (comma-separated)
+        <textarea id="profInt" rows="3"></textarea>
+      </label>
+      <label>Capacity (max students) <input id="profCap" type="number" min="1" max="20"></label>
+      <label>Bio <textarea id="profBio" rows="3"></textarea></label>
+      <button class="btn btn-primary" onclick="saveProfile()">Save Profile</button>
+      <p class="muted small">Matching uses your updated interests immediately.</p>
+    </div>
+  </section>
+
+  <!-- ============ DIRECTORY ============ -->
+  <section id="view-directory" class="view hidden">
+    <h1>Faculty Directory</h1>
+    <div class="card filters">
+      <input id="dirSearch" placeholder="Search by name or interest..." oninput="loadDirectory()">
+      <select id="dirDept" onchange="loadDirectory()">
+        <option value="">All departments</option>
+        <option>Information Technology</option>
+        <option>Computer Science</option>
+        <option>Information Technology Centre</option>
+      </select>
+    </div>
+    <div id="compareBox"></div>
+    <div id="dirBody" class="grid"></div>
+  </section>
+
+  <!-- ============ LEADERBOARD ============ -->
+  <section id="view-leaderboard" class="view hidden">
+    <h1>🏆 Supervisor Rankings</h1>
+    <p class="muted">Ranked by average student rating, then approved assignments, then total matches.</p>
+    <div id="leaderBody"></div>
+  </section>
+
+  <!-- ============ APPROVALS (admin) ============ -->
+  <section id="view-approvals" class="view hidden">
+    <h1>Pending Approvals</h1>
+    <p class="muted">Teacher-accepted requests wait here for your final approval. You can also approve a still-pending request directly, or assign any supervisor manually below.</p>
+    <div id="approvalsBody"></div>
+    <div class="card">
+      <h2>Manual Assignment (Admin Override)</h2>
+      <label>Unassigned idea
+        <select id="assignIdea"></select>
+      </label>
+      <label>Supervisor
+        <select id="assignSup"></select>
+      </label>
+      <button class="btn btn-primary" onclick="manualAssign()">Assign Now</button>
+    </div>
+  </section>
+
+  <!-- ============ TEACHERS (admin) ============ -->
+  <section id="view-teachers" class="view hidden">
+    <h1>Manage Teachers</h1>
+    <div id="teachersBody"></div>
+    <div class="card">
+      <h2>Add New Teacher</h2>
+      <label>Name <input id="tName"></label>
+      <label>Email <input id="tEmail" type="email"></label>
+      <label>Department <input id="tDept"></label>
+      <label>Designation <input id="tDes"></label>
+      <label>Research interests <textarea id="tInt" rows="2"></textarea></label>
+      <label>Capacity <input id="tCap" type="number" min="1" max="20" value="5"></label>
+      <button class="btn btn-primary" onclick="addTeacher()">Add Teacher</button>
+      <p class="muted small">Default password for a new teacher: teacher123</p>
+    </div>
+  </section>
+
+  <!-- ============ STUDENTS (admin) ============ -->
+  <section id="view-students" class="view hidden">
+    <h1>Manage Students</h1>
+    <div id="studentsBody"></div>
+  </section>
+
+  <!-- ============ ASSIGNMENTS (admin) ============ -->
+  <section id="view-assignments" class="view hidden">
+    <h1>Final Assignments</h1>
+    <button class="btn btn-outline" onclick="downloadAssignments()">⬇ Download CSV</button>
+    <div id="assignmentsBody"></div>
+  </section>
+
+  <!-- ============ NOTIFICATIONS ============ -->
+  <section id="view-notifications" class="view hidden">
+    <h1>Notifications</h1>
+    <button class="btn btn-outline" onclick="markAllRead()">Mark all as read</button>
+    <div id="notifBody"></div>
+  </section>
+
+  <!-- ============ EVALUATION ============ -->
+  <section id="view-evaluation" class="view hidden">
+    <h1>Evaluation — TF-IDF vs Full Pipeline</h1>
+    <p class="muted">10 labeled test ideas. Higher is better on every metric.</p>
+    <div id="evalBody"></div>
+  </section>
+
+  <footer class="credit-line">
+    Developed by <strong>Zafarullah Shah</strong> (24BS(IT)128), 6th Semester IT &middot; SupervisorMatch &middot; DS/ML Exhibition &middot; <a href="https://www.sbbusba.edu.pk/" target="_blank" rel="noopener">sbbusba.edu.pk</a>
+  </footer>
+</main>
+
+<!-- ============ AI ASSISTANT CHATBOT (v5, rule-based, no external API) ============ -->
+<button id="chatFab" class="chat-fab hidden" onclick="toggleChat()" title="Ask the assistant">💬</button>
+<div id="chatPanel" class="chat-panel hidden">
+  <div class="chat-header">
+    <b>💬 SupervisorMatch Assistant</b>
+    <span id="chatEngine" class="muted small">rule-based (offline)</span>
+    <button class="btn btn-light btn-sm" onclick="toggleChat()">✕</button>
+  </div>
+  <div id="chatBody" class="chat-body"></div>
+  <div class="chat-input-row">
+    <input id="chatInput" placeholder="Paste your idea or ask a question..." onkeydown="if(event.key==='Enter') sendChat()">
+    <button class="btn btn-primary btn-sm" onclick="sendChat()">Send</button>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

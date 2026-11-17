@@ -1,0 +1,23 @@
+{
+  "methods": {
+    "TF-IDF only": {
+      "Hit@3": 0.4,
+      "Hit@5": 0.6,
+      "MRR": 0.317,
+      "NDCG@5": 0.386
+    },
+    "Full pipeline (TF-IDF + domain boost + capacity)": {
+      "Hit@3": 0.7,
+      "Hit@5": 0.8,
+      "MRR": 0.57,
+      "NDCG@5": 0.628
+    },
+    "Hybrid (0.4 TF-IDF + 0.6 BERT)": {
+      "Hit@3": 0.8,
+      "Hit@5": 0.9,
+      "MRR": 0.72,
+      "NDCG@5": 0.765
+    }
+  },
+  "measured_with": "USE_BERT=1, sentence-transformers all-MiniLM-L6-v2, 100 supervisors, 10 test ideas"
+}
