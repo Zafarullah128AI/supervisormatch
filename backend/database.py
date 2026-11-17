@@ -7,12 +7,18 @@ requests, feedback, notifications.
 """
 
 import csv
+import os
 import sqlite3
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
 ROOT_DIR = BASE_DIR.parent
-DB_PATH = BASE_DIR / "supervisormatch.db"
+if os.environ.get("VERCEL") == "1":
+    # Vercel's filesystem is read-only except /tmp: keep the runtime
+    # database there. It is recreated and reseeded on every cold start.
+    DB_PATH = Path("/tmp") / "supervisormatch.db"
+else:
+    DB_PATH = BASE_DIR / "supervisormatch.db"
 DATA_CSV = ROOT_DIR / "data.csv"
 
 ADMIN_EMAIL = "admin@sbbusba.edu.pk"
